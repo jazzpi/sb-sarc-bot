@@ -1,0 +1,9 @@
+# Editor stuff
+.vscode/
+
+# Python stuff
+env/
+.python-version
+
+# Token file
+.telegram-token
