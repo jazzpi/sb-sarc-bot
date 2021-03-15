@@ -66,13 +66,6 @@ class SpongeBobSarcasmBot:
             return
 
         sarcastic = self.sarcasmize(query)
-        self._logger.info(
-            "Got query: %s (from %s) -> %s",
-            query,
-            update.inline_query.from_user.username,
-            sarcastic,
-        )
-
         results = [
             InlineQueryResultArticle(
                 id=str(uuid4()),
