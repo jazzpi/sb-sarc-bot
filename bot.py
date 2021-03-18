@@ -11,7 +11,7 @@ from telegram.ext import Updater, Dispatcher, InlineQueryHandler, CallbackContex
 
 
 WHITESPACE_GROUP = re.compile("(\s+)")
-LINK_PATTERN = re.compile(r"(?:\w+://)?\w+\.\w{2,}")
+LINK_PATTERN = re.compile(r"(?:\w+://)?[\w-]+\.[\w-]{2,}")
 
 
 class SpongeBobSarcasmBot:
