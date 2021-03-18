@@ -10,6 +10,10 @@ from telegram import Update, InlineQueryResultArticle, InputTextMessageContent
 from telegram.ext import Updater, Dispatcher, InlineQueryHandler, CallbackContext
 
 
+WHITESPACE_GROUP = re.compile("(\s+)")
+LINK_PATTERN = re.compile(r"(?:\w+://)?\w+\.\w{2,}")
+
+
 class SpongeBobSarcasmBot:
     _logger: logging.Logger
     _updater: Updater
@@ -28,44 +32,62 @@ class SpongeBobSarcasmBot:
         if not run_in_background:
             self._updater.idle()
 
-    @staticmethod
-    def sarcasmize(text: str) -> str:
-        # Empty strings
-        if not text:
-            return text
+    @classmethod
+    def sarcasmize_word(cls, word: str) -> str:
+        word = list(word)
+        isupper = word[0].isupper()
 
-        text = list(text)
-        isupper = text[0].isupper()
-
-        for i, c in enumerate(text):
+        for i, c in enumerate(word):
             if isupper:
-                text[i] = c.upper()
+                word[i] = c.upper()
             else:
-                text[i] = c.lower()
+                word[i] = c.lower()
 
             if i == 0:
                 isupper = not isupper
             else:
                 # We want to avoid "lI" and "Il"
-                if text[i - 1] == "l" and text[i] == "I":
-                    text[i - 1] = "L"
-                    text[i] = "i"
+                if word[i - 1] == "l" and word[i] == "I":
+                    word[i - 1] = "L"
+                    word[i] = "i"
                     isupper = True
-                elif text[i - 1] == "I" and text[i] == "l":
-                    text[i - 1] = "i"
-                    text[i] = "L"
+                elif word[i - 1] == "I" and word[i] == "l":
+                    word[i - 1] = "i"
+                    word[i] = "L"
                     isupper = False
                 else:
                     isupper = not isupper
 
-        return "".join(text)
+        return "".join(word)
+
+    @classmethod
+    def sarcasmize_text(cls, text: str) -> str:
+        # Split on whitespace, but keep information about the whitespace so we
+        # can later reassemble the text with the original whitespace.
+        # str.split() doesn't allow us to do this.
+        exploded = re.split(WHITESPACE_GROUP, text)
+
+        for i, word in enumerate(exploded):
+            # Ignore empty strings (could happen at the beginning)
+            if not word:
+                continue
+            # If the first character is a space, they all are -> ignore
+            if word[0].isspace():
+                continue
+            # Don't mess with links
+            if re.match(LINK_PATTERN, word) is not None:
+                continue
+
+            exploded[i] = cls.sarcasmize_word(word)
+
+        return "".join(exploded)
 
     def _handle_call(self, update: Update, _: CallbackContext) -> None:
         query = update.inline_query.query
         if not query:
             return
 
-        sarcastic = self.sarcasmize(query)
+        sarcastic = self.sarcasmize_text(query)
         results = [
             InlineQueryResultArticle(
                 id=str(uuid4()),
