@@ -7,3 +7,5 @@ env/
 
 # Token file
 .telegram-token
+# Photo ID for sarcastic Spongebob
+.photo_id

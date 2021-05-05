@@ -6,8 +6,19 @@ import sys
 
 from uuid import uuid4
 
-from telegram import Update, InlineQueryResultArticle, InputTextMessageContent
-from telegram.ext import Updater, Dispatcher, InlineQueryHandler, CallbackContext
+from telegram import (
+    Update,
+    InlineQueryResultArticle,
+    InlineQueryResultCachedPhoto,
+    InputTextMessageContent,
+)
+from telegram.ext import (
+    Updater,
+    Dispatcher,
+    InlineQueryHandler,
+    CallbackContext,
+    CommandHandler,
+)
 
 
 WHITESPACE_GROUP = re.compile("(\s+)")
@@ -18,14 +29,24 @@ class SpongeBobSarcasmBot:
     _logger: logging.Logger
     _updater: Updater
     _dispatcher: Dispatcher
+    _photo_id: str
 
-    def __init__(self, token: str):
+    def __init__(self, token: str, photo_id: str = None):
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._photo_id = photo_id
 
         self._updater = Updater(token=token)
         self._dispatcher = self._updater.dispatcher
 
         self._dispatcher.add_handler(InlineQueryHandler(self._handle_call))
+        self._dispatcher.add_handler(CommandHandler("getimg", self._handle_getimg))
+
+    def _handle_getimg(self, update: Update, _: CallbackContext):
+        photos = update.message.reply_photo(
+            "https://danny.page/assets/images/mocking-spongebob.jpg"
+        )
+        for photo in photos.photo:
+            photos.reply_text(f"File of size {photo.file_size}: {photo.file_id}")
 
     def run(self, run_in_background=False):
         self._updater.start_polling()
@@ -93,8 +114,17 @@ class SpongeBobSarcasmBot:
                 id=str(uuid4()),
                 title=sarcastic,
                 input_message_content=InputTextMessageContent(sarcastic),
-            )
+            ),
         ]
+        if self._photo_id is not None:
+            results.append(
+                InlineQueryResultCachedPhoto(
+                    id=str(uuid4()),
+                    photo_file_id=self._photo_id,
+                    title=sarcastic,
+                    caption=sarcastic,
+                )
+            )
 
         update.inline_query.answer(results)
 
@@ -104,8 +134,13 @@ def main():
 
     with open(".telegram-token") as fh:
         token = fh.read().strip()
+    try:
+        with open(".photo_id") as fh:
+            photo_id = fh.read().strip()
+    except FileNotFoundError:
+        photo_id = None
 
-    bot = SpongeBobSarcasmBot(token)
+    bot = SpongeBobSarcasmBot(token, photo_id)
     bot.run()
     return 0
 
